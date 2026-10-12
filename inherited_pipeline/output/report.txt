@@ -1,0 +1,161 @@
+
+====================================================================================================
+Generate synthetic data
+====================================================================================================
+Generated users: 30,000, devices: 46,532, trades: 1,174,780, trade_ledger: 1,230,048
+Injected (ground truth):
+  weeks: ['2024-01-01', '2025-06-23']
+  as_of: 2025-07-01
+  launch_multi_device_sync: 2024-10-07
+  launch_fractional_status_5: 2025-03-03
+  users_web_only_no_device: 2311
+  users_uninstalled_no_active_device: 2009
+  users_without_active_device: 4320
+  sync_adopters: 10078
+  cancel_only_traders: 355
+  users_null_country: 710
+  users_moved_country: 421
+  users_duplicated_in_users_table: 0
+  weeks_where_rerun_differs_from_reported: 77
+  first_week: {'v1_active_traders_rerun_today': 3430, 'v1_completed_trades_rerun_today': 12329, 'completed_trades_deduped_same_population': 8138, 'fanout_extra_rows': 4191, 'traders_without_active_device': 584, 'v1_active_traders_with_zero_completed': 278, 'status_5_trades': 0, 'ledger_completed_trades': 9485, 'ledger_traders': 3695}
+  last_week: {'v1_active_traders_rerun_today': 5636, 'v1_completed_trades_rerun_today': 16859, 'completed_trades_deduped_same_population': 11442, 'fanout_extra_rows': 5417, 'traders_without_active_device': 952, 'v1_active_traders_with_zero_completed': 764, 'status_5_trades': 2094, 'ledger_completed_trades': 15409, 'ledger_traders': 6039}
+
+====================================================================================================
+Step 2: freeze a baseline (v1 as-is, last 8 weeks, by country)
+====================================================================================================
+  baseline_v1.csv exists; current v1 output MATCHES the frozen baseline
+week_start  active_traders  completed_trades
+2025-05-05            5688             17300
+2025-05-12            5680             17142
+2025-05-19            5742             17204
+2025-05-26            5737             17133
+2025-06-02            5699             17032
+2025-06-09            5658             17272
+2025-06-16            5666             17049
+2025-06-23            5636             16859
+
+====================================================================================================
+Step 3: the Friday deliverable, country cut for the week of 2025-06-23 (v1 definition, unchanged)
+====================================================================================================
+country  active_traders  completed_trades
+     US            2423              7210
+     GB             776              2279
+     DE             566              1678
+     CA             505              1505
+     BR             369              1117
+     SG             356              1049
+     AU             281               842
+     FR             212               720
+Unknown             148               459
+  TOTAL            5636             16859
+
+  dashboard reported for 2025-06-23: 5,636 active traders, 16,859 completed trades
+
+====================================================================================================
+Step 4: tests (known-answer fixture, reconciliation, v2 quality)
+====================================================================================================
+  [PASS] test_known_answer::test_country_cut_matches_v1_on_fixture
+  [PASS] test_known_answer::test_half_open_week_boundary
+  [PASS] test_known_answer::test_v1_reproduces_hand_answer_including_its_bugs
+  [PASS] test_known_answer::test_v2_returns_correct_answer
+  [PASS] test_reconciliation::test_countries_sum_to_total
+  [PASS] test_reconciliation::test_country_cut_matches_v1_row_for_row
+  [PASS] test_reconciliation::test_latest_week_matches_number_already_reported
+  [PASS] test_reconciliation::test_null_country_is_a_visible_row
+  [PASS] test_reconciliation::test_users_table_has_one_row_per_user
+  [PASS] test_v2_quality::test_no_unknown_status_codes
+  [PASS] test_v2_quality::test_v2_has_no_fan_out_and_reconciles_to_ledger
+  [PASS] test_v2_quality::test_v2_ignores_current_device_state
+
+  12 passed, 0 failed
+  [WARN] reported completed_trades moved >10% week over week: [('2024-10-07', 13.8), ('2025-03-03', -12.9)]
+
+====================================================================================================
+Step 5: measure each issue separately (production untouched)
+====================================================================================================
+             issue                                metric week 2024-01-01 (rerun today) week 2025-06-23
+         1 fan-out          completed_trades inflation %                          51.5            47.3
+         1 fan-out          avg active devices per trade                          1.51            1.47
+2 no active device                       traders dropped                           584             952
+2 no active device              % of all traders dropped                          14.5            14.5
+2 no active device              completed trades dropped                         1,347           1,873
+     4 definitions       active traders with 0 completed                           278             764
+     4 definitions                % of v1 active traders                           8.1            13.6
+         6 country      trades placed in another country                           161               0
+         6 country             traders with NULL country                            95             168
+            ledger v1 completed_trades error vs ledger %                          30.0             9.4
+
+Issue 5: status codes (evidence for seeds/trade_status.csv; meanings UNVERIFIED)
+ status  trades_all_time  trades_this_week first_seen  pct_fully_filled  pct_zero_filled  pct_fractional_qty  pct_in_ledger  counted_by_v1
+      1           857362             12102 2024-01-01               100                0                   0            100           True
+      2           136070              2164 2024-01-01                 0              100                   0              0          False
+      3            79561              1213 2024-01-01                 0                0                   0            100           True
+      4            65880              1104 2024-01-01                 0              100                   0              0          False
+      5            35907              2094 2025-03-03               100                0                 100            100          False
+
+Why the total looked plausible: the bugs offset each other (week of 2025-06-23)
+                                                       step  trades
+                              ledger: filled orders (truth)   15409
+- completed trades of users with no active device (issue 2)   -1873
+                - status 5 fills v1 doesn't count (issue 5)   -2094
+             = one row per completed trade, v1's population   11442
+             + extra rows from the device fan-out (issue 1)    5417
+           = v1 completed_trades (what the dashboard shows)   16859
+
+  v2 (PROPOSED, not shipped) for 2025-06-23: 6,039 active traders, 15,409 completed trades  vs. v1: 5,636 / 16,859
+
+Issue 3: history drift (dashboard value when reported vs. v1 rerun today)
+week_start  reported_active_traders  rerun_active_traders  active_traders_drift_pct  reported_completed_trades  rerun_completed_trades  completed_trades_drift_pct
+2024-01-01                     3640                  3430                      -5.8                       9003                   12329                        36.9
+2024-04-01                     3770                  3572                      -5.3                       9061                   12571                        38.7
+2024-07-01                     4206                  4013                      -4.6                      10128                   14178                        40.0
+2024-09-30                     4715                  4542                      -3.7                      11418                   15906                        39.3
+2024-12-30                     5248                  5098                      -2.9                      16827                   18150                         7.9
+2025-03-31                     5715                  5602                      -2.0                      16788                   17214                         2.5
+2025-06-16                     5677                  5666                      -0.2                      16999                   17049                         0.3
+2025-06-23                     5636                  5636                       0.0                      16859                   16859                         0.0
+
+  77 of 78 weeks no longer reproduce. Active traders drift -5.9% to 0.0%; completed trades 0.0% to 41.9%.
+
+====================================================================================================
+Step 6: trend check (trained on the stable period) + ledger reconciliation
+====================================================================================================
+  training_weeks: 26
+  ratio_weeks_outside_interval: 38
+  ratio_onset: 2024-10-07
+  ledger_ratio_weeks_outside_interval: 2
+  level_weeks_outside_interval: 49
+  ledger_level_weeks_outside_interval: 49
+  gap_vs_ledger_training_mean_pct: -6.6
+  gap_vs_ledger_training_sd_pct: 0.6
+  gap_vs_ledger_peak_pct: 24.6
+  gap_vs_ledger_peak_week: 2025-02-24
+  gap_vs_ledger_last_pct: 9.4
+  chart: output/trend_check.png
+
+====================================================================================================
+Scorecard: what the analysis found vs. what the generator injected
+====================================================================================================
+                                       check   injected      found result
+             fan-out extra rows (2024-01-01)       4191       4191     OK
+  traders without active device (2024-01-01)        584        584     OK
+active traders with 0 completed (2024-01-01)        278        278     OK
+        ledger completed trades (2024-01-01)       9485       9485     OK
+             fan-out extra rows (2025-06-23)       5417       5417     OK
+  traders without active device (2025-06-23)        952        952     OK
+active traders with 0 completed (2025-06-23)        764        764     OK
+        ledger completed trades (2025-06-23)      15409      15409     OK
+                status 5 trades (2025-06-23)       2094       2094     OK
+                         status 5 first seen 2025-03-03 2025-03-03     OK
+              weeks that no longer reproduce         77         77     OK
+              users without an active device       4320       4320     OK
+                     users with NULL country        710        710     OK
+                   users who changed country        421        421     OK
+              divergence onset (trend check) 2024-10-07 2024-10-07     OK
+
+====================================================================================================
+Summary
+====================================================================================================
+  tests: 12 passed, 0 failed | scorecard: 15/15
+  Friday cut: output/country_cut_2025-06-23.csv (sums to the reported 5,636 / 16,859)
+  measures: output/measures.csv, output/history_drift.csv | trend: output/trend_check.png

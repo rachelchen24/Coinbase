@@ -1,0 +1,11 @@
+issue,metric,week 2024-01-01 (rerun today),week 2025-06-23
+1 fan-out,completed_trades inflation %,51.5,47.3
+1 fan-out,avg active devices per trade,1.51,1.47
+2 no active device,traders dropped,584,952
+2 no active device,% of all traders dropped,14.5,14.5
+2 no active device,completed trades dropped,"1,347","1,873"
+4 definitions,active traders with 0 completed,278,764
+4 definitions,% of v1 active traders,8.1,13.6
+6 country,trades placed in another country,161,0
+6 country,traders with NULL country,95,168
+ledger,v1 completed_trades error vs ledger %,30.0,9.4

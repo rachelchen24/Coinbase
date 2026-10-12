@@ -1,0 +1,6 @@
+status_code,label,is_completed,evidence,verified
+1,filled,true,"filled_quantity = quantity on 100% of rows; present in ledger",false
+2,cancelled,false,"filled_quantity = 0 on 100% of rows; absent from ledger",false
+3,partially_filled,true,"0 < filled_quantity < quantity; present in ledger",false
+4,rejected,false,"filled_quantity = 0 on 100% of rows; absent from ledger",false
+5,filled_fractional,true,"first seen 2025-03-03 (fractional launch); quantity < 1; filled_quantity = quantity; present in ledger",false

@@ -1,0 +1,7 @@
+step,trades
+ledger: filled orders (truth),15409
+- completed trades of users with no active device (issue 2),-1873
+- status 5 fills v1 doesn't count (issue 5),-2094
+"= one row per completed trade, v1's population",11442
++ extra rows from the device fan-out (issue 1),5417
+= v1 completed_trades (what the dashboard shows),16859
