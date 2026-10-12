@@ -1,0 +1,11 @@
+﻿step,users,running_total
+System C raw rows (signup attempts),57012,57012
+"- exact repeats (same user, same timestamp)",-1200,55812
+"- retries (same user, different timestamp)",-1800,54012
+- test / internal accounts,-598,53414
+- bot burst,-900,52514
+- abandoned / incomplete signups,-2783,49731
+± day boundary: completed outside the UTC day,-216,49515
+"= C, cleaned",49515,49515
++ accounts in A (system of record) missing from C,467,49982
+= RECOMMENDED: new accounts created on the UTC day,49982,49982

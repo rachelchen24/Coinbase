@@ -1,0 +1,17 @@
+﻿issue,injected,detected,diff
+A exact repeats,419,419,0
+B exact repeats,300,300,0
+C exact repeats,1200,1200,0
+A retries,400,400,0
+B retries,0,0,0
+C retries,1800,1800,0
+A test users,590,590,0
+B test users,147,147,0
+C test users,598,598,0
+A bot users,700,700,0
+B bot users,0,0,0
+C bot users,900,900,0
+C abandoned real users,2783,2783,0
+C completed users outside UTC day,216,216,0
+B users outside UTC day,12841,12841,0
+True new signups (recommended),50000,49982,-18

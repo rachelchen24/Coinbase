@@ -1,0 +1,4 @@
+﻿system,counts,raw_rows_x,unique_users_x,test,bots,real_completed_on_utc_day,raw_rows_y,exact_repeats,exact_only_visible_after_normalizing,retry_repeats,unique_users_y,exact_pct_in_top_15min,top_15min_window
+A,created accounts (accounts service),51800,50981,590,700,49691,51800,419,249,400,50981,100.0,13:00
+B,identity-verified users (KYC vendor),45106,44806,147,0,31818,45106,300,93,0,44806,3.3,20:00
+C,signup attempts (client analytics),57012,54012,598,900,49515,57012,1200,563,1800,54012,2.2,20:30

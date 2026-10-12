@@ -1,0 +1,5 @@
+﻿group,users,pct_outside_utc_day,pct_2200_0200_utc,pct_web,pct_test,pct_bot,pct_not_completed,median_ingest_lag_min,pct_explained,explanation
+C not in A,3500,6.6,30.5,28.0,0.3,5.7,85.2,0.2,99.0,"abandoned attempts, bots, prior-day rows (C partitions by ingestion time), and the last minutes of the day A hadn't loaded yet"
+B not in A,13118,97.9,41.5,,0.0,0.0,0.0,26.2,99.8,signed up 00:00-07:00 UTC on the next day = the end of B's Pacific day
+A not in C,467,0.0,37.3,32.8,0.0,0.0,0.0,10.3,30.0,only late-evening ones are explainable (mobile events queued past midnight); the rest look like client-side tracking loss
+A not in B (07-24 UTC),3409,0.0,18.5,24.9,0.0,0.0,0.0,10.3,100.0,"not identity-verified when B was pulled: failed, or still pending (see coverage by hour)"

@@ -1,0 +1,52 @@
+{
+  "config": {
+    "seed": 20261001,
+    "n_users": 5000,
+    "launch_at": "2026-06-01T00:00:00Z",
+    "as_of": "2026-10-01T00:00:00Z",
+    "kyc_source_timezone": "America/New_York",
+    "outage_day": "2026-08-19",
+    "kyc_feed_stale_hours": 30
+  },
+  "injected": {
+    "duplicate_rows": {
+      "app_events": 187,
+      "kyc_vendor_events": 109,
+      "ledger_events": 81
+    },
+    "unresolved_kyc_applicants": {
+      "no_match": 112,
+      "ambiguous_email": 8
+    },
+    "unresolved_ledger_accounts": 4,
+    "tracker_outage": {
+      "day": "2026-08-19",
+      "step": "email_verification",
+      "events_dropped": 34
+    },
+    "out_of_order_users_injected": 60,
+    "late_arriving_rows": {
+      "app_events": 19,
+      "kyc_vendor_events": 127,
+      "ledger_events": 61
+    },
+    "future_dated_rows": 3,
+    "pre_launch_rows": 3,
+    "kyc_feed_stale_hours": 30,
+    "users_with_pending_next_step": 102
+  },
+  "expected": {
+    "users_inferred_email_verified": 24,
+    "users_inferred_id_verified": 77,
+    "users_inferred_first_deposit": 0,
+    "users_only_returned_deposits": 67,
+    "users_out_of_sequence": 61,
+    "returned_transfers": 96
+  },
+  "source_rows": {
+    "app_events": 9550,
+    "kyc_vendor_events": 3766,
+    "accounts": 2852,
+    "ledger_events": 6905
+  }
+}

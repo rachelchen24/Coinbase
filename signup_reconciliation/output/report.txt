@@ -1,0 +1,106 @@
+
+====================================================================================================
+1. Normalize: IDs to one format, timestamps to UTC
+====================================================================================================
+B has no timezone in its timestamps. Read naively as UTC, B is -7.00h from A for the same 31,688 users (100.0% exactly). That is US/Pacific daylight time, so B is converted from America/Los_Angeles.
+  A: 8.0% of user IDs changed by normalization (whitespace, case, 'usr-' prefix, '.0')
+  B: 100.0% of user IDs changed by normalization (whitespace, case, 'usr-' prefix, '.0')
+  C: 32.3% of user IDs changed by normalization (whitespace, case, 'usr-' prefix, '.0')
+
+====================================================================================================
+2. Deduplicate all three systems (not just C)
+====================================================================================================
+system  raw_rows  exact_repeats  exact_only_visible_after_normalizing  retry_repeats  unique_users  exact_pct_in_top_15min top_15min_window
+     A     51800            419                                   249            400         50981                   100.0            13:00
+     B     45106            300                                    93              0         44806                     3.3            20:00
+     C     57012           1200                                   563           1800         54012                     2.2            20:30
+
+Bots: 900 users in a signup burst 03:41-03:46 UTC on 3 disposable domains. 22 other users on those domains signed up outside the burst and are kept as real.
+
+====================================================================================================
+3. Who is in each system (unique users, before any cleaning)
+====================================================================================================
+      region  users
+in all three  31339
+A and C only  19173
+A and B only    349
+B and C only    259
+      A only    120
+      B only  12859
+      C only   3241
+
+====================================================================================================
+4. Hypothesis: each system counts a different funnel stage, so C >= A >= B should nest
+====================================================================================================
+      test                                 scope  pct
+    B in A          B as extracted (Pacific day) 70.7
+    B in A           B restricted to the UTC day 99.1
+    A in C                               deduped 99.1
+C not in A share with status != completed or bot 85.2
+
+Verdict: HOLDS. After aligning B to the UTC day, B nests inside A and A inside C at >= 99%. C's extra users are mostly attempts that never completed, so C counts attempts, A counts created accounts, and B counts identity-verified users.
+
+====================================================================================================
+5. Profile the users who don't match
+====================================================================================================
+                 group  users  pct_outside_utc_day  pct_2200_0200_utc  pct_web  pct_test  pct_bot  pct_not_completed  median_ingest_lag_min  pct_explained
+            C not in A   3500                  6.6               30.5     28.0       0.3      5.7               85.2                    0.2           99.0
+            B not in A  13118                 97.9               41.5      NaN       0.0      0.0                0.0                   26.2           99.8
+            A not in C    467                  0.0               37.3     32.8       0.0      0.0                0.0                   10.3           30.0
+A not in B (07-24 UTC)   3409                  0.0               18.5     24.9       0.0      0.0                0.0                   10.3          100.0
+  C not in A: abandoned attempts, bots, prior-day rows (C partitions by ingestion time), and the last minutes of the day A hadn't loaded yet
+  B not in A: signed up 00:00-07:00 UTC on the next day = the end of B's Pacific day
+  A not in C: only late-evening ones are explainable (mobile events queued past midnight); the rest look like client-side tracking loss
+  A not in B (07-24 UTC): not identity-verified when B was pulled: failed, or still pending (see coverage by hour)
+
+A's last load landed at 2026-10-08 00:02 UTC. For signups after 23:42, C has 824 completed users and A only 591: A is still loading its last batch.
+Platform mix of 'A not in B': {'ios': 40.5, 'android': 34.5, 'web': 24.9} (no platform is missing wholesale).
+B coverage of A's users by UTC signup hour: {'07-12': 90.9, '12-18': 90.6, '18-21': 90.0, '21-23': 89.5, '23-24': 90.5}. Flat, so B's gap on these hours is KYC pass rate, not verifications still arriving.
+
+====================================================================================================
+6. Bridge: System C's raw rows to one number
+====================================================================================================
+                                              step  users  running_total
+               System C raw rows (signup attempts)  57012          57012
+       - exact repeats (same user, same timestamp)  -1200          55812
+        - retries (same user, different timestamp)  -1800          54012
+                        - test / internal accounts   -598          53414
+                                       - bot burst   -900          52514
+                  - abandoned / incomplete signups  -2783          49731
+     ± day boundary: completed outside the UTC day   -216          49515
+                                      = C, cleaned  49515          49515
+ + accounts in A (system of record) missing from C    467          49982
+= RECOMMENDED: new accounts created on the UTC day  49982          49982
+
+Same cleaning applied to every system:
+system                               counts  raw_rows  unique_users  test  bots  real_completed_on_utc_day
+     A  created accounts (accounts service)     51800         50981   590   700                      49691
+     B identity-verified users (KYC vendor)     45106         44806   147     0                      31818
+     C   signup attempts (client analytics)     57012         54012   598   900                      49515
+
+Mini-funnel on the hours both A and B cover (07:00-24:00 UTC): 34,953 new accounts, of which 31,818 (91.0%) were identity-verified by the time B was pulled.
+
+====================================================================================================
+7. Self-check against the generator's ground truth (not available in real life)
+====================================================================================================
+                            issue  injected  detected  diff
+                  A exact repeats       419       419     0
+                  B exact repeats       300       300     0
+                  C exact repeats      1200      1200     0
+                        A retries       400       400     0
+                        B retries         0         0     0
+                        C retries      1800      1800     0
+                     A test users       590       590     0
+                     B test users       147       147     0
+                     C test users       598       598     0
+                      A bot users       700       700     0
+                      B bot users         0         0     0
+                      C bot users       900       900     0
+           C abandoned real users      2783      2783     0
+C completed users outside UTC day       216       216     0
+          B users outside UTC day     12841     12841     0
+   True new signups (recommended)     50000     49982   -18
+
+Recommended number misses 18 real signups: users absent from both A (late load) and C (tracking loss); injected = 18.
+
+Wrote bridge.csv, ground_truth_check.csv, mismatch_profiles.csv, overlaps.csv, system_summary.csv to output/
